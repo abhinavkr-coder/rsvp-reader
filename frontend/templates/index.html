@@ -13,6 +13,7 @@
             <p class="subtitle">Read faster with Rapid Visual Serial Presentation</p>
         </header>
 
+        <!-- Upload Section -->
         <div class="upload-section" id="uploadSection">
             <div class="upload-box">
                 <input type="file" id="pdfInput" accept=".pdf" class="file-input">
@@ -31,6 +32,7 @@
             </div>
         </div>
 
+        <!-- Reader Section -->
         <div class="reader-section" id="readerSection" style="display: none;">
             <div class="progress-bar">
                 <div class="progress" id="progressBar"></div>
@@ -46,11 +48,10 @@
                 <button class="btn btn-secondary" id="reviewBtn">Review</button>
             </div>
 
+            <!-- FIXED: Correct order of word parts -->
             <div class="rsvp-display" id="rsvpDisplay">
                 <div class="word-display">
-                    <span class="pivotal-letter" id="pivotalLetter">T</span>
-                    <span class="left-part" id="leftPart"></span>
-                    <span class="right-part" id="rightPart"></span>
+                    <span class="word-part left-part" id="leftPart"></span><span class="word-part focal-letter" id="focalLetter"></span><span class="word-part right-part" id="rightPart"></span>
                 </div>
                 <div class="word-progress" id="wordProgress">0 / 0</div>
             </div>
@@ -60,6 +61,7 @@
                 <button class="btn btn-secondary" id="resetBtn">↺ Reset</button>
             </div>
 
+            <!-- Review Panel -->
             <div class="review-panel" id="reviewPanel" style="display: none;">
                 <div class="review-header">
                     <h3>Review Mode</h3>
@@ -70,7 +72,7 @@
                     <button class="tab" data-tab="sentence">Sentence</button>
                 </div>
                 <div class="review-content">
-                    <div class="review-item" id="currentParagraph"></div>
+                    <div class="review-item active" id="currentParagraph"></div>
                     <div class="review-item" id="currentSentence"></div>
                 </div>
                 <div class="review-nav">
@@ -80,11 +82,13 @@
             </div>
         </div>
 
+        <!-- Loading State -->
         <div class="loading" id="loading" style="display: none;">
             <div class="spinner"></div>
             <p>Processing PDF...</p>
         </div>
 
+        <!-- Error State -->
         <div class="error" id="error" style="display: none;">
             <p id="errorMessage"></p>
             <button class="btn btn-primary" id="retryBtn">Retry</button>

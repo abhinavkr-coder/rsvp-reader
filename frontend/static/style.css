@@ -150,46 +150,99 @@ header h1 {
     font-weight: bold;
 }
 
+/* IMPROVED: RSVP Display Styling */
 .rsvp-display {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1rem;
-    min-height: 200px;
+    gap: 1.5rem;
+    min-height: 250px;
     justify-content: center;
+    padding: 2rem;
 }
 
 .word-display {
-    font-size: 4rem;
-    font-weight: bold;
+    font-size: 3.5rem;
+    font-weight: 700;
+    font-family: 'Segoe UI', -apple-system, system-ui, sans-serif;
     position: relative;
-    padding: 2rem;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 16px;
-    min-width: 400px;
-    text-align: center;
+    padding: 2rem 3rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 20px;
+    min-width: 500px;
+    min-height: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 0.05em;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
-.left-part,
+/* FIXED: Word parts are inline with no spacing */
+.word-part {
+    display: inline;
+    white-space: pre;
+}
+
+.left-part {
+    color: #b0b0b0;
+}
+
 .right-part {
-    color: #a0a0a0;
+    color: #b0b0b0;
 }
 
-.pivotal-letter {
+/* IMPROVED: Focal letter styling */
+.focal-letter {
     color: #667eea;
-    font-size: 5rem;
-    text-shadow: 0 0 20px rgba(102, 126, 234, 0.5);
-    animation: pulse 0.3s ease;
+    font-size: 4.5rem;
+    font-weight: 900;
+    text-shadow: 
+        0 0 30px rgba(102, 126, 234, 0.8),
+        0 0 60px rgba(102, 126, 234, 0.4);
+    animation: focal-pulse 0.4s ease;
+    position: relative;
+    display: inline-block;
+    transform: scale(1.15);
+    margin: 0 0.1em;
 }
 
-@keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
+/* Subtle background glow for focal letter */
+.focal-letter::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 120%;
+    height: 120%;
+    background: radial-gradient(circle, rgba(102, 126, 234, 0.2) 0%, transparent 70%);
+    border-radius: 50%;
+    z-index: -1;
+}
+
+@keyframes focal-pulse {
+    0% { 
+        transform: scale(1);
+        opacity: 0.5;
+    }
+    50% { 
+        transform: scale(1.2);
+        opacity: 1;
+    }
+    100% { 
+        transform: scale(1.15);
+        opacity: 1;
+    }
 }
 
 .word-progress {
     color: #a0a0a0;
-    font-size: 0.9rem;
+    font-size: 1rem;
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 0.5rem 1.5rem;
+    border-radius: 20px;
 }
 
 .main-controls {
@@ -233,6 +286,8 @@ header h1 {
     border-radius: 12px;
     padding: 1.5rem;
     margin-top: 1rem;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .review-header {
@@ -242,6 +297,10 @@ header h1 {
     margin-bottom: 1rem;
 }
 
+.review-header h3 {
+    color: #667eea;
+}
+
 .close-btn {
     background: none;
     border: none;
@@ -249,10 +308,17 @@ header h1 {
     font-size: 1.5rem;
     cursor: pointer;
     transition: color 0.2s ease;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
 }
 
 .close-btn:hover {
     color: #e0e0e0;
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .review-tabs {
@@ -283,10 +349,11 @@ header h1 {
 .review-content {
     background: rgba(0, 0, 0, 0.3);
     border-radius: 8px;
-    padding: 1rem;
-    min-height: 100px;
+    padding: 1.5rem;
+    min-height: 120px;
     margin-bottom: 1rem;
-    line-height: 1.6;
+    line-height: 1.8;
+    color: #d0d0d0;
 }
 
 .review-item {
@@ -311,6 +378,7 @@ header h1 {
     justify-content: center;
     min-height: 400px;
     text-align: center;
+    gap: 1rem;
 }
 
 .spinner {
@@ -326,22 +394,45 @@ header h1 {
     to { transform: rotate(360deg); }
 }
 
-.error {
-    color: #e74c3c;
+.loading p {
+    color: #a0a0a0;
+    font-size: 1.1rem;
 }
 
+.error {
+    color: #ff6b6b;
+}
+
+.error p {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+}
+
+/* Responsive Design */
 @media (max-width: 768px) {
     .container {
         padding: 1rem;
     }
     
-    .word-display {
-        font-size: 2.5rem;
-        min-width: 280px;
+    header h1 {
+        font-size: 2rem;
     }
     
-    .pivotal-letter {
-        font-size: 3rem;
+    .file-label {
+        width: 100%;
+        max-width: 350px;
+        height: 250px;
+    }
+    
+    .word-display {
+        font-size: 2.5rem;
+        min-width: 320px;
+        min-height: 120px;
+        padding: 1.5rem 2rem;
+    }
+    
+    .focal-letter {
+        font-size: 3.5rem;
     }
     
     .controls {
@@ -351,5 +442,31 @@ header h1 {
     
     .speed-control {
         justify-content: center;
+    }
+    
+    .main-controls {
+        flex-direction: column;
+    }
+    
+    .main-controls .btn {
+        width: 100%;
+    }
+}
+
+/* Keyboard shortcut hints */
+.controls::after {
+    content: 'Shortcuts: Space=Play/Pause, ↑↓=Speed, ←→=Navigate';
+    position: absolute;
+    bottom: -2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.75rem;
+    color: #666;
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .controls::after {
+        display: none;
     }
 }

@@ -33,7 +33,7 @@ class RSVPReader {
         this.retryBtn = document.getElementById('retryBtn');
         
         this.rsvpDisplay = document.getElementById('rsvpDisplay');
-        this.pivotalLetter = document.getElementById('pivotalLetter');
+        this.focalLetter = document.getElementById('focalLetter');  // Fixed: renamed from pivotalLetter
         this.leftPart = document.getElementById('leftPart');
         this.rightPart = document.getElementById('rightPart');
         this.wordProgress = document.getElementById('wordProgress');
@@ -179,16 +179,25 @@ class RSVPReader {
         const word = wordData.word;
         const focalLetters = wordData.focal_letters;
         
-        let pivotalIndex = Math.floor(word.length / 2);
+        // Get the primary focal letter index
+        let focalIndex = Math.floor(word.length / 2);
         
         if (focalLetters.length > 0) {
-            pivotalIndex = focalLetters[0].index;
+            // Use the first (primary) focal letter from our improved model
+            focalIndex = focalLetters[0].index;
         }
         
-        this.leftPart.textContent = word.substring(0, pivotalIndex);
-        this.pivotalLetter.textContent = word[pivotalIndex] || '';
-        this.rightPart.textContent = word.substring(pivotalIndex + 1);
+        // FIXED: Split word into left, focal, and right parts
+        const leftText = word.substring(0, focalIndex);
+        const focalChar = word[focalIndex] || '';
+        const rightText = word.substring(focalIndex + 1);
         
+        // Update the display (HTML order is already correct: left, focal, right)
+        this.leftPart.textContent = leftText;
+        this.focalLetter.textContent = focalChar;
+        this.rightPart.textContent = rightText;
+        
+        // Update word progress
         this.wordProgress.textContent = `${this.currentIndex + 1} / ${this.words.length}`;
     }
     
@@ -304,6 +313,7 @@ class RSVPReader {
     }
 }
 
+// Initialize the reader when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     new RSVPReader();
 });
