@@ -1,9 +1,15 @@
+# RSVP Reader - Updated Requirements
+# PyTorch removed - no longer needed with improved focal letter model!
+
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 python-multipart==0.0.6
 pdfplumber==0.10.3
-PyMuPDF==1.23.8
-torch==2.1.1
-numpy==1.24.3
+PyMuPDF==1.24.0
+numpy==1.26.0
 pytesseract==0.3.10
 Pillow==10.1.0
+
+# NOTE: PyTorch (torch==2.1.1) has been removed
+# The new focal letter model uses lightweight NumPy-based heuristics
+# This saves ~1GB of disk space and installation time!

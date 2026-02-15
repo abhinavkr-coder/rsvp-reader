@@ -1,71 +1,184 @@
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+"""
+Improved Focal Letter Predictor for RSVP Reading
+
+Based on research:
+- Optimal Viewing Position (OVP) is typically 30-40% from word start
+- Consonants are more important than vowels for word recognition
+- The "anchor point" should be slightly left of center
+- Multiple focal points can improve readability for longer words
+"""
+
 import numpy as np
 
-class FocalLetterPredictor(nn.Module):
-    def __init__(self, embedding_dim=64, hidden_dim=128):
-        super().__init__()
-        self.embedding_dim = embedding_dim
-        self.hidden_dim = hidden_dim
+class FocalLetterPredictor:
+    def __init__(self):
+        # Vowels are less critical for word recognition
+        self.vowels = set('aeiouAEIOU')
         
-        self.char_embedding = nn.Embedding(128, embedding_dim)  # ASCII characters
-        self.lstm = nn.LSTM(embedding_dim, hidden_dim, batch_first=True)
-        self.attention = nn.Linear(hidden_dim, 1)
-        self.positional_encoding = self._create_positional_encoding(max_len=50, d_model=embedding_dim)
-        
-    def _create_positional_encoding(self, max_len, d_model):
-        pe = torch.zeros(max_len, d_model)
-        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-np.log(10000.0) / d_model))
-        pe[:, 0::2] = torch.sin(position * div_term)
-        pe[:, 1::2] = torch.cos(position * div_term)
-        return pe.unsqueeze(0)
+        # High-value consonants that aid recognition
+        self.important_consonants = set('bcdfghjklmnpqrstvwxyzBCDFGHJKLMNPQRSTVWXYZ')
     
-    def forward(self, word):
-        word_len = len(word)
-        char_indices = torch.tensor([[ord(c) % 128 for c in word]], dtype=torch.long)
-        
-        embedded = self.char_embedding(char_indices)
-        
-        if word_len <= 50:
-            embedded = embedded + self.positional_encoding[:, :word_len, :]
-        
-        lstm_out, _ = self.lstm(embedded)
-        attention_weights = torch.softmax(self.attention(lstm_out), dim=1)
-        
-        return attention_weights.squeeze().detach().numpy()
+    def calculate_ovp(self, word_length):
+        """
+        Calculate Optimal Viewing Position based on word length
+        Research shows OVP is typically 30-40% from the start
+        """
+        if word_length <= 3:
+            return word_length // 2
+        elif word_length <= 5:
+            return int(word_length * 0.35)
+        elif word_length <= 8:
+            return int(word_length * 0.37)
+        else:
+            return int(word_length * 0.40)
     
-    def predict_focal_letters(self, word):
-        self.eval()
-        with torch.no_grad():
-            weights = self.forward(word)
-            focal_indices = np.where(weights > np.mean(weights) + np.std(weights))[0]
-            return focal_indices, weights
+    def get_character_importance(self, char, position, word_length):
+        """
+        Calculate importance score for a character at a position
+        Higher scores = more important for word recognition
+        """
+        score = 0.0
+        
+        # Base score for consonants vs vowels
+        if char in self.important_consonants:
+            score += 1.0
+        elif char in self.vowels:
+            score += 0.3
+        else:
+            score += 0.1  # Numbers, special chars
+        
+        # Position-based scoring (prefer positions near OVP)
+        ovp = self.calculate_ovp(word_length)
+        distance_from_ovp = abs(position - ovp)
+        position_score = 1.0 / (1 + distance_from_ovp * 0.5)
+        score *= position_score
+        
+        # Penalize first and last positions slightly
+        if position == 0:
+            score *= 0.7
+        elif position == word_length - 1:
+            score *= 0.6
+        
+        # Boost middle consonants
+        if position > 0 and position < word_length - 1:
+            if char in self.important_consonants:
+                score *= 1.2
+        
+        return score
+    
+    def identify_focal_letters(self, word):
+        """
+        Identify the most important letter(s) for RSVP reading
+        Returns indices of focal letters with their weights
+        """
+        if len(word) == 0:
+            return [], []
+        
+        if len(word) == 1:
+            return [0], [1.0]
+        
+        # Calculate importance for each character
+        scores = []
+        for i, char in enumerate(word):
+            score = self.get_character_importance(char, i, len(word))
+            scores.append(score)
+        
+        scores = np.array(scores)
+        
+        # Normalize scores
+        if scores.max() > 0:
+            scores = scores / scores.max()
+        
+        # For short words (1-4 chars): 1 focal letter
+        # For medium words (5-8 chars): 1-2 focal letters
+        # For long words (9+ chars): 2-3 focal letters
+        if len(word) <= 4:
+            num_focal = 1
+        elif len(word) <= 8:
+            num_focal = 2 if len(word) >= 6 else 1
+        else:
+            num_focal = min(3, len(word) // 4)
+        
+        # Get top N indices
+        focal_indices = np.argsort(scores)[-num_focal:][::-1]
+        focal_indices = sorted(focal_indices.tolist())  # Sort by position
+        
+        focal_weights = [scores[i] for i in focal_indices]
+        
+        return focal_indices, focal_weights
+    
+    def get_primary_focal(self, word):
+        """
+        Get the single most important focal letter (for main highlighting)
+        """
+        indices, weights = self.identify_focal_letters(word)
+        if len(indices) > 0:
+            return indices[0]
+        return 0
+
 
 class FocalLetterExtractor:
     def __init__(self):
-        self.model = FocalLetterPredictor()
-        self.model.load_state_dict(self._get_pretrained_weights())
-        self.model.eval()
-        
-    def _get_pretrained_weights(self):
-        pretrained_weights = {
-            'char_embedding.weight': torch.randn(128, 64) * 0.1,
-            'lstm.weight_ih_l0': torch.randn(512, 64) * 0.1,
-            'lstm.weight_hh_l0': torch.randn(512, 128) * 0.1,
-            'lstm.bias_ih_l0': torch.zeros(512),
-            'lstm.bias_hh_l0': torch.zeros(512),
-            'attention.weight': torch.randn(1, 128) * 0.1,
-            'attention.bias': torch.zeros(1)
-        }
-        return pretrained_weights
+        self.predictor = FocalLetterPredictor()
     
     def get_focal_letters(self, word):
+        """
+        Returns list of focal letter dictionaries with index, char, and weight
+        """
         if len(word) == 0:
             return []
         
-        focal_indices, weights = self.model.predict_focal_letters(word)
-        return [{'index': int(i), 'char': word[int(i)], 'weight': float(weights[i])} for i in focal_indices]
+        indices, weights = self.predictor.identify_focal_letters(word)
+        
+        return [
+            {
+                'index': int(idx),
+                'char': word[int(idx)],
+                'weight': float(weight)
+            }
+            for idx, weight in zip(indices, weights)
+        ]
+    
+    def get_primary_focal_letter(self, word):
+        """
+        Returns the main focal letter for display
+        """
+        if len(word) == 0:
+            return {'index': 0, 'char': '', 'weight': 0.0}
+        
+        idx = self.predictor.get_primary_focal(word)
+        focal_letters = self.get_focal_letters(word)
+        
+        if focal_letters:
+            return focal_letters[0]
+        
+        return {'index': idx, 'char': word[idx], 'weight': 1.0}
 
+
+# Global instance
 focal_extractor = FocalLetterExtractor()
+
+
+# Test the predictor
+if __name__ == "__main__":
+    test_words = [
+        "I", "am", "the", "quick", "brown", "fox", "jumps", 
+        "over", "lazy", "dog", "reading", "comprehension",
+        "extraordinary", "example", "beautiful", "information"
+    ]
+    
+    print("Testing Focal Letter Predictor:")
+    print("=" * 60)
+    
+    for word in test_words:
+        focal_letters = focal_extractor.get_focal_letters(word)
+        primary = focal_extractor.get_primary_focal_letter(word)
+        
+        # Create visual representation
+        visual = list(word)
+        for fl in focal_letters:
+            visual[fl['index']] = f"[{visual[fl['index']]}]"
+        
+        print(f"{word:20} -> {''.join(visual):30} (primary: {primary['char']} at {primary['index']})")
+    
+    print("=" * 60)

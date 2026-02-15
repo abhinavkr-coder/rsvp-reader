@@ -6,9 +6,16 @@ from pydantic import BaseModel
 from typing import List, Optional
 import uvicorn
 import os
+from pathlib import Path
 
 from pdf_extractor import extract_pdf
 from focal_model import focal_extractor
+
+# Get the project root directory (parent of backend/)
+BASE_DIR = Path(__file__).resolve().parent.parent
+FRONTEND_DIR = BASE_DIR / "frontend"
+STATIC_DIR = FRONTEND_DIR / "static"
+TEMPLATES_DIR = FRONTEND_DIR / "templates"
 
 app = FastAPI(title="RSVP Reader API")
 
@@ -20,7 +27,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
+# Mount static files
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 class WordWithFocal(BaseModel):
     word: str
@@ -34,7 +42,11 @@ class TextResponse(BaseModel):
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
-    with open("frontend/templates/index.html", "r", encoding="utf-8") as f:
+    index_path = TEMPLATES_DIR / "index.html"
+    if not index_path.exists():
+        raise HTTPException(status_code=500, detail=f"Template not found at {index_path}")
+    
+    with open(index_path, "r", encoding="utf-8") as f:
         return f.read()
 
 @app.post("/upload-pdf", response_model=TextResponse)
@@ -77,4 +89,12 @@ async def health_check():
     return {"status": "healthy"}
 
 if __name__ == "__main__":
+    print(f"Starting RSVP Reader...")
+    print(f"Base directory: {BASE_DIR}")
+    print(f"Frontend directory: {FRONTEND_DIR}")
+    print(f"Static directory: {STATIC_DIR}")
+    print(f"Templates directory: {TEMPLATES_DIR}")
+    print(f"\nServer will be available at: http://localhost:8000")
+    print(f"\nPress CTRL+C to stop the server")
+    
     uvicorn.run(app, host="0.0.0.0", port=8000)
