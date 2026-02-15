@@ -13,6 +13,8 @@ class RSVPReader {
         
         this.initializeElements();
         this.attachEventListeners();
+        
+        console.log('RSVP Reader initialized');
     }
     
     initializeElements() {
@@ -33,7 +35,7 @@ class RSVPReader {
         this.retryBtn = document.getElementById('retryBtn');
         
         this.rsvpDisplay = document.getElementById('rsvpDisplay');
-        this.focalLetter = document.getElementById('focalLetter');  // Fixed: renamed from pivotalLetter
+        this.focalLetter = document.getElementById('focalLetter');
         this.leftPart = document.getElementById('leftPart');
         this.rightPart = document.getElementById('rightPart');
         this.wordProgress = document.getElementById('wordProgress');
@@ -47,6 +49,11 @@ class RSVPReader {
         this.nextReviewBtn = document.getElementById('nextReviewBtn');
         this.tabs = document.querySelectorAll('.tab');
         this.reviewItems = document.querySelectorAll('.review-item');
+        
+        // Verify critical elements exist
+        if (!this.focalLetter || !this.leftPart || !this.rightPart) {
+            console.error('Critical display elements not found!');
+        }
     }
     
     attachEventListeners() {
@@ -89,6 +96,7 @@ class RSVPReader {
         const file = event.target.files[0];
         if (!file) return;
         
+        console.log('Uploading file:', file.name);
         this.showLoading();
         
         const formData = new FormData();
@@ -101,12 +109,17 @@ class RSVPReader {
                 body: formData
             });
             
-            if (!response.ok) throw new Error('Failed to process PDF');
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Failed to process PDF: ${errorText}`);
+            }
             
             const data = await response.json();
+            console.log('PDF processed successfully:', data.words.length, 'words');
             this.loadData(data);
             this.showReader();
         } catch (error) {
+            console.error('Upload error:', error);
             this.showError(error.message);
         }
     }
@@ -118,10 +131,20 @@ class RSVPReader {
         this.currentIndex = 0;
         this.currentWordIndex = 0;
         this.sentenceEndIndex = -1;
+        
+        console.log(`Loaded ${this.words.length} words, ${this.paragraphs.length} paragraphs, ${this.sentences.length} sentences`);
+        
+        // FIXED: Display the first word immediately when PDF is loaded
+        if (this.words.length > 0) {
+            this.displayWord(this.words[0]);
+            this.wordProgress.textContent = `1 / ${this.words.length}`;
+        }
+        
         this.updateProgress();
     }
     
     togglePlayPause() {
+        console.log('Toggle play/pause. Currently playing:', this.isPlaying);
         if (this.isPlaying) {
             this.pause();
         } else {
@@ -130,39 +153,50 @@ class RSVPReader {
     }
     
     play() {
+        if (!this.words || this.words.length === 0) {
+            console.error('No words to play!');
+            return;
+        }
+        
         if (this.currentIndex >= this.words.length) {
             this.currentIndex = 0;
         }
         
+        console.log('Starting playback from word', this.currentIndex);
         this.isPlaying = true;
         this.playPauseBtn.textContent = '⏸ Pause';
         this.displayNextWord();
     }
     
     pause() {
+        console.log('Pausing playback');
         this.isPlaying = false;
         this.playPauseBtn.textContent = '▶ Play';
         if (this.timer) {
             clearTimeout(this.timer);
+            this.timer = null;
         }
     }
     
     displayNextWord() {
         if (this.currentIndex >= this.words.length) {
+            console.log('Reached end of words');
             this.pause();
             return;
         }
         
         const wordData = this.words[this.currentIndex];
+        console.log(`Displaying word ${this.currentIndex}:`, wordData.word);
         this.displayWord(wordData);
         
         this.currentWordIndex = this.currentIndex;
         
-        let delay = 60000 / this.wpm;
+        let delay = 60000 / this.wpm;  // Convert WPM to milliseconds per word
         
         if (wordData.is_sentence_end) {
             this.sentenceEndIndex = this.currentIndex;
             delay += this.sentencePause;
+            console.log('Sentence end - adding pause');
         }
         
         this.updateProgress();
@@ -179,20 +213,27 @@ class RSVPReader {
         const word = wordData.word;
         const focalLetters = wordData.focal_letters;
         
+        console.log('Displaying:', word, 'focal:', focalLetters);
+        
         // Get the primary focal letter index
         let focalIndex = Math.floor(word.length / 2);
         
-        if (focalLetters.length > 0) {
+        if (focalLetters && focalLetters.length > 0) {
             // Use the first (primary) focal letter from our improved model
             focalIndex = focalLetters[0].index;
         }
         
-        // FIXED: Split word into left, focal, and right parts
+        // Ensure focal index is within bounds
+        focalIndex = Math.max(0, Math.min(word.length - 1, focalIndex));
+        
+        // Split word into left, focal, and right parts
         const leftText = word.substring(0, focalIndex);
         const focalChar = word[focalIndex] || '';
         const rightText = word.substring(focalIndex + 1);
         
-        // Update the display (HTML order is already correct: left, focal, right)
+        console.log(`Word parts: "${leftText}" + "${focalChar}" + "${rightText}"`);
+        
+        // Update the display
         this.leftPart.textContent = leftText;
         this.focalLetter.textContent = focalChar;
         this.rightPart.textContent = rightText;
@@ -204,28 +245,44 @@ class RSVPReader {
     adjustSpeed(delta) {
         this.wpm = Math.max(100, Math.min(1000, this.wpm + delta));
         this.speedDisplay.textContent = `${this.wpm} WPM`;
+        console.log('Speed adjusted to:', this.wpm, 'WPM');
     }
     
     reset() {
+        console.log('Resetting reader');
         this.pause();
         this.currentIndex = 0;
         this.currentWordIndex = 0;
         this.sentenceEndIndex = -1;
         this.updateProgress();
-        this.displayWord({ word: '', focal_letters: [], is_sentence_end: false });
-        this.wordProgress.textContent = `0 / ${this.words.length}`;
+        
+        if (this.words.length > 0) {
+            this.displayWord(this.words[0]);
+            this.wordProgress.textContent = `1 / ${this.words.length}`;
+        } else {
+            this.leftPart.textContent = '';
+            this.focalLetter.textContent = '';
+            this.rightPart.textContent = '';
+            this.wordProgress.textContent = `0 / 0`;
+        }
     }
     
     goBack() {
+        console.log('Going back to upload');
         this.pause();
         this.uploadSection.style.display = 'flex';
         this.readerSection.style.display = 'none';
         this.pdfInput.value = '';
+        this.words = [];
+        this.paragraphs = [];
+        this.sentences = [];
     }
     
     updateProgress() {
-        const progress = (this.currentIndex / this.words.length) * 100;
-        this.progressBar.style.width = `${progress}%`;
+        if (this.words.length > 0) {
+            const progress = (this.currentIndex / this.words.length) * 100;
+            this.progressBar.style.width = `${progress}%`;
+        }
     }
     
     openReview() {
@@ -239,6 +296,8 @@ class RSVPReader {
     }
     
     updateReviewContent() {
+        if (!this.words[this.currentWordIndex]) return;
+        
         const wordData = this.words[this.currentWordIndex];
         const currentWord = wordData.word;
         
@@ -295,12 +354,14 @@ class RSVPReader {
     }
     
     showReader() {
+        console.log('Showing reader section');
         this.loading.style.display = 'none';
         this.readerSection.style.display = 'flex';
         this.error.style.display = 'none';
     }
     
     showError(message) {
+        console.error('Showing error:', message);
         this.loading.style.display = 'none';
         this.readerSection.style.display = 'none';
         this.error.style.display = 'flex';
@@ -315,5 +376,10 @@ class RSVPReader {
 
 // Initialize the reader when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    new RSVPReader();
+    console.log('DOM loaded, initializing RSVP Reader...');
+    try {
+        new RSVPReader();
+    } catch (error) {
+        console.error('Failed to initialize RSVP Reader:', error);
+    }
 });
