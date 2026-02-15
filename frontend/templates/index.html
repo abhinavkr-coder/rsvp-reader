@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSVP Reader - Rapid Visual Serial Presentation</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>RSVP Reader</h1>
+            <p class="subtitle">Read faster with Rapid Visual Serial Presentation</p>
+        </header>
+
+        <div class="upload-section" id="uploadSection">
+            <div class="upload-box">
+                <input type="file" id="pdfInput" accept=".pdf" class="file-input">
+                <label for="pdfInput" class="file-label">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    <span>Drop PDF here or click to upload</span>
+                </label>
+                <label class="ocr-toggle">
+                    <input type="checkbox" id="ocrToggle">
+                    <span>Use OCR (for scanned PDFs)</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="reader-section" id="readerSection" style="display: none;">
+            <div class="progress-bar">
+                <div class="progress" id="progressBar"></div>
+            </div>
+
+            <div class="controls">
+                <button class="btn btn-secondary" id="backBtn">← Back</button>
+                <div class="speed-control">
+                    <button class="speed-btn" id="slowDownBtn">−</button>
+                    <span class="speed-display" id="speedDisplay">300 WPM</span>
+                    <button class="speed-btn" id="speedUpBtn">+</button>
+                </div>
+                <button class="btn btn-secondary" id="reviewBtn">Review</button>
+            </div>
+
+            <div class="rsvp-display" id="rsvpDisplay">
+                <div class="word-display">
+                    <span class="pivotal-letter" id="pivotalLetter">T</span>
+                    <span class="left-part" id="leftPart"></span>
+                    <span class="right-part" id="rightPart"></span>
+                </div>
+                <div class="word-progress" id="wordProgress">0 / 0</div>
+            </div>
+
+            <div class="main-controls">
+                <button class="btn btn-primary" id="playPauseBtn">▶ Play</button>
+                <button class="btn btn-secondary" id="resetBtn">↺ Reset</button>
+            </div>
+
+            <div class="review-panel" id="reviewPanel" style="display: none;">
+                <div class="review-header">
+                    <h3>Review Mode</h3>
+                    <button class="close-btn" id="closeReview">×</button>
+                </div>
+                <div class="review-tabs">
+                    <button class="tab active" data-tab="paragraph">Paragraph</button>
+                    <button class="tab" data-tab="sentence">Sentence</button>
+                </div>
+                <div class="review-content">
+                    <div class="review-item" id="currentParagraph"></div>
+                    <div class="review-item" id="currentSentence"></div>
+                </div>
+                <div class="review-nav">
+                    <button class="btn btn-secondary" id="prevReviewBtn">← Previous</button>
+                    <button class="btn btn-secondary" id="nextReviewBtn">Next →</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="loading" id="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Processing PDF...</p>
+        </div>
+
+        <div class="error" id="error" style="display: none;">
+            <p id="errorMessage"></p>
+            <button class="btn btn-primary" id="retryBtn">Retry</button>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

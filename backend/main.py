@@ -1,0 +1,80 @@
+from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import List, Optional
+import uvicorn
+import os
+
+from pdf_extractor import extract_pdf
+from focal_model import focal_extractor
+
+app = FastAPI(title="RSVP Reader API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
+
+class WordWithFocal(BaseModel):
+    word: str
+    focal_letters: List[dict]
+    is_sentence_end: bool
+
+class TextResponse(BaseModel):
+    words: List[WordWithFocal]
+    paragraphs: List[str]
+    sentences: List[str]
+
+@app.get("/", response_class=HTMLResponse)
+async def read_root():
+    with open("frontend/templates/index.html", "r", encoding="utf-8") as f:
+        return f.read()
+
+@app.post("/upload-pdf", response_model=TextResponse)
+async def upload_pdf(file: UploadFile = File(...), use_ocr: bool = False):
+    if not file.filename.lower().endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+    
+    try:
+        content = await file.read()
+        extracted = extract_pdf(content, use_ocr=use_ocr)
+        
+        words_with_focal = []
+        sentence_end_chars = {'.', '!', '?'}
+        
+        for i, word in enumerate(extracted['words']):
+            focal_letters = focal_extractor.get_focal_letters(word)
+            
+            is_sentence_end = False
+            if i < len(extracted['words']) - 1:
+                next_word = extracted['words'][i + 1]
+                is_sentence_end = any(char in sentence_end_chars for char in word)
+            
+            words_with_focal.append(WordWithFocal(
+                word=word,
+                focal_letters=focal_letters,
+                is_sentence_end=is_sentence_end
+            ))
+        
+        return TextResponse(
+            words=words_with_focal,
+            paragraphs=extracted['paragraphs'],
+            sentences=extracted['sentences']
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
